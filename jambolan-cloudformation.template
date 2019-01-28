@@ -1,0 +1,204 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09", 
+    "Description": "JAMBOLAN Serverless Stack", 
+    "Resources": {
+        "JambolanLambdaExecutionRole": {
+            "Type": "AWS::IAM::Role", 
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17", 
+                    "Statement": [
+                        {	
+                            "Effect": "Allow", 
+                            "Principal": {
+                                "Service": [
+                                    "lambda.amazonaws.com"
+                                ]
+                            }, 
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                }, 
+                "Path": "/"
+            }
+        }, 
+        "JambolanLambdaExecutionPolicy": {
+            "DependsOn": [
+                "JambolanLambdaExecutionRole", 
+                "JambolanDynamoDBTable"
+            ], 
+            "Type": "AWS::IAM::Policy", 
+            "Properties": {
+                "PolicyName": "LambdaJambolanDataAccessPolicy", 
+                "Roles": [
+                    {
+                        "Ref": "JambolanLambdaExecutionRole"
+                    }
+                ], 
+                "PolicyDocument": {
+                    "Version": "2012-10-17", 
+                    "Statement": [
+                        {
+                            "Effect": "Allow", 
+                            "Action": [
+                                "logs:*"
+                            ], 
+                            "Resource": [
+                                "arn:aws:logs:*:*:*"
+                            ]
+                        }, 
+                        {
+                            "Effect": "Allow", 
+                            "Action": [
+                                "dynamodb:BatchGetItem", 
+                                "dynamodb:GetItem", 
+                                "dynamodb:Query", 
+                                "dynamodb:Scan", 
+                                "dynamodb:BatchWriteItem", 
+                                "dynamodb:PutItem", 
+                                "dynamodb:UpdateItem"
+                            ], 
+                            "Resource": [
+                                {
+                                    "Fn::GetAtt": [
+                                        "JambolanDynamoDBTable", 
+                                        "Arn"
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        }, 
+        "CreateStore": {
+            "DependsOn": [
+                "JambolanLambdaExecutionRole"
+            ], 
+            "Type": "AWS::Lambda::Function", 
+            "Properties": {
+                "FunctionName": "CreateStoreFuntion", 
+                "MemorySize": 256, 
+                "Code": {
+                    "S3Bucket": "lambda-function-bucket-us-west-1-1539482578895", 
+                    "S3Key": "jambolanapi-1.0.0-SNAPSHOT7.jar"
+                }, 
+                "Role": {
+                    "Fn::GetAtt": [
+                        "JambolanLambdaExecutionRole", 
+                        "Arn"
+                    ]
+                }, 
+                "Handler": "com.three55.jambolanapi.function.StoreFunctions::createStore", 
+                "Runtime": "java8", 
+                "Timeout": 25
+            }
+        }, 
+        "FindStoreById": {
+            "DependsOn": [
+                "JambolanLambdaExecutionRole"
+            ], 
+            "Type": "AWS::Lambda::Function", 
+            "Properties": {
+                "FunctionName": "FindStoreByIdFunction", 
+                "MemorySize": 256, 
+                "Code": {
+                    "S3Bucket": "lambda-function-bucket-us-west-1-1539482578895", 
+                    "S3Key": "jambolanapi-1.0.0-SNAPSHOT7.jar"
+                }, 
+                "Role": {
+                    "Fn::GetAtt": [
+                        "JambolanLambdaExecutionRole", 
+                        "Arn"
+                    ]
+                }, 
+                "Handler": "com.three55.jambolanapi.function.StoreFunctions::findStoreById", 
+                "Runtime": "java8", 
+                "Timeout": 25
+            }
+        }, 
+        "JambolanDynamoDBTable": {
+            "Type": "AWS::DynamoDB::Table", 
+            "Properties": {
+                "TableName": "JAMBOLAN", 
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "itemPK", 
+                        "AttributeType": "S"
+                    }, 
+                    {
+                        "AttributeName": "itemSK", 
+                        "AttributeType": "S"
+                    }, 
+                    {
+                        "AttributeName": "name", 
+                        "AttributeType": "S"
+                    }, 
+                    {
+                        "AttributeName": "addrCountry", 
+                        "AttributeType": "S"
+                    },
+			        {
+			            "AttributeName" : "adminLogin",
+			            "AttributeType" : "S"   
+			        }
+                    
+                ], 
+                "KeySchema": [
+                    {
+                        "AttributeName": "itemPK", 
+                        "KeyType": "HASH"
+                    }, 
+                    {
+                        "AttributeName": "itemSK", 
+                        "KeyType": "RANGE"
+                    }
+                ], 
+                "ProvisionedThroughput": {
+                    "ReadCapacityUnits": "5", 
+                    "WriteCapacityUnits": "5"
+                }, 
+                "GlobalSecondaryIndexes": [
+                    {
+                        "IndexName": "StoresAndCountryIndex", 
+                        "KeySchema": [
+                            {
+                                "AttributeName": "addrCountry", 
+                                "KeyType": "HASH"
+                            }, 
+                            {
+                                "AttributeName": "name", 
+                                "KeyType": "RANGE"
+                            }
+                        ], 
+                        "Projection": {
+                            "ProjectionType": "KEYS_ONLY"
+                        }, 
+                        "ProvisionedThroughput": {
+                            "ReadCapacityUnits": "5", 
+                            "WriteCapacityUnits": "5"
+                        }
+                    },
+					 {
+					    "IndexName" : "StoresAdminIndex",
+					    "KeySchema" : [
+					        {
+					          "AttributeName" : "adminLogin",
+					          "KeyType" : "HASH"
+					        }
+					  	],
+					   "Projection" : {
+					    	"ProjectionType" : "KEYS_ONLY"
+					  	},
+					   "ProvisionedThroughput" : {
+					    	"ReadCapacityUnits" : "5",
+					        "WriteCapacityUnits" : "5"
+					  	}
+					 }
+                ]
+            }
+        }
+    }
+}	
