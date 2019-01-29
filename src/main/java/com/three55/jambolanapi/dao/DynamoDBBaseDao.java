@@ -14,7 +14,7 @@ import com.three55.jambolanapi.exceptions.DaoException;
  */
 public class DynamoDBBaseDao {
 	
-	protected final DynamoDBMapper mapper = DynamoDBManager.instance().mapper();
+	protected final DynamoDBMapper mapper = DynamoDBManager.mapper();
 	
 	protected void executeDao(Runnable r) {
 		try {			

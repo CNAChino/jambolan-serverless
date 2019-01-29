@@ -3,6 +3,8 @@ package com.three55.jambolanapi.dao;
 import java.util.ArrayList;
 import java.util.Optional;
 
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.local.embedded.DynamoDBEmbedded;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -21,26 +23,27 @@ import com.three55.jambolanapi.function.CreateStoreFunction;
 import com.three55.jambolanapi.function.FindStoreFunction;
 import com.three55.jambolanapi.model.Store;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 
 public class StoreFunctionTest {
 	
-	ArrayList<AttributeDefinition> tableAttributes = new ArrayList<>();
-	ArrayList<KeySchemaElement> tableKeySchema = new ArrayList<>();
-	GlobalSecondaryIndex tableGSI = new GlobalSecondaryIndex();
-	ArrayList<KeySchemaElement> tableGSISchema = new ArrayList<>();
+	private ArrayList<AttributeDefinition> tableAttributes = new ArrayList<>();
+	private ArrayList<KeySchemaElement> tableKeySchema = new ArrayList<>();
+	private GlobalSecondaryIndex tableGSI = new GlobalSecondaryIndex();
+	private ArrayList<KeySchemaElement> tableGSISchema = new ArrayList<>();
 
 	@Before
 	public void setUp() throws Exception {
-		// use embedded dynamodb
-		DynamoDBManager.setConnectToLive(false);
+		AmazonDynamoDB client = DynamoDBEmbedded.create().amazonDynamoDB();
+
+		DynamoDBManager.setClient(client);
+
 		System.setProperty("sqlite4java.library.path","src/lib");
 		
 		setupTableParameters();
 		
-		createTable();
+		createTable(client);
 		
 	}
 
@@ -66,7 +69,7 @@ public class StoreFunctionTest {
 		System.out.println(newStore);
 		System.out.println(optStore.get());
 		
-		assertTrue(newStore.equals(optStore.get()));
+		assertEquals(newStore, optStore.get());
 		
 	}
 	
@@ -132,9 +135,8 @@ public class StoreFunctionTest {
 	 * Create the table with the schema settings defined
 	 * in setupTableParameters()
 	 */
-	private void createTable() {
-		DynamoDBManager dbManager = DynamoDBManager.instance();
-		DynamoDB dynamoDB = new DynamoDB(dbManager.client());
+	private void createTable(AmazonDynamoDB client) {
+		DynamoDB dynamoDB = new DynamoDB(client);
 		String tableName = "JAMBOLAN";
 		
 		try {

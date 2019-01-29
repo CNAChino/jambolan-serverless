@@ -4,7 +4,6 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.local.embedded.DynamoDBEmbedded;
 
 /**
  * Singleton that provides connection  to DynamoDB Live or 
@@ -13,63 +12,38 @@ import com.amazonaws.services.dynamodbv2.local.embedded.DynamoDBEmbedded;
  *
  */
 public class DynamoDBManager {
-	
-	private static volatile DynamoDBManager instance;
-	
-	private static volatile boolean connectToLive = true;
 
-	private  DynamoDBMapper mapper;
-	
-	private  AmazonDynamoDB client;
+	private  static DynamoDBMapper mapper;
+
+	private  static AmazonDynamoDB client;
 
 	/**
-	 * Constructors a live/local connection 
-	 */
-	private DynamoDBManager() {
-		if (connectToLive) {
-			client = AmazonDynamoDBClientBuilder.standard()
-					.withRegion(Regions.US_WEST_1)
-					.build();
-		} else {
-			client = DynamoDBEmbedded.create().amazonDynamoDB();
-		}
-
-		mapper = new DynamoDBMapper(client);
-	}
-
-	/**
-	 * singleton instance accessor 
-	 *  
-	 * @return Singleon DynamoDBManager
-	 */
-	public static DynamoDBManager instance() {
-		if (instance == null) {
-			synchronized(DynamoDBManager.class) {
-				if (instance == null)
-					instance = new DynamoDBManager();
-			}
-		}
-
-		return instance;
-	}
-	
-	public synchronized static void setConnectToLive(boolean b) {
-		connectToLive = b;
-	}
-
-	/**
-	 * 
+	 *
+	 * By default, this returns a singleton DynamoDBMapper that is connected to DynamodDB in AWS Cloud US-WEST-1.
+	 *
+	 * To get a DynamoDBMapper using DynamoDBLocal (embedded or localhost), call DynamoDBManager.setClient
+	 * before the very first call of mapper()
+	 *
 	 * @return DynamoDBMapper
 	 */
-	public  DynamoDBMapper mapper() {
+	public  static DynamoDBMapper mapper() {
+
+		if (mapper == null) {
+			synchronized(DynamoDBManager.class) {
+				if (mapper == null) {
+					if (client == null) {
+						client = AmazonDynamoDBClientBuilder.standard()
+								.withRegion(Regions.US_WEST_1)
+								.build();
+					}
+					mapper = new DynamoDBMapper(client);
+				}
+			}
+		}
 		return mapper;
 	}
 
-	/**
-	 * 
-	 * @return AmazonDynamoDB client
-	 */
-	public  AmazonDynamoDB client() {
-		return client;
+	public  static void setClient(AmazonDynamoDB c) {
+		client = c;
 	}
 }
