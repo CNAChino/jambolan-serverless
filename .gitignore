@@ -52,3 +52,5 @@ pom.xml.tag
 start_neo4j_cluster.sh
 TODO
 
+dependency-reduced-pom.xml
+
