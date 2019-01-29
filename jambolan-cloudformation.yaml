@@ -1,0 +1,143 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  JAMBOLAN Serverless Stack
+  This template defines CreateStore and FindStoreById Lambda Functions
+  and the API Gateway resources (POST /store and GET store/{id} need for exposure)
+
+Resources:
+  # IAM Role that will be assumed by CreateStore and FindStoreById
+  JambolanLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: "/"
+
+  # Policy associated with JambolanLambdaExecutionRole.
+  # This gives CreateStore and FindStoreById permission to access JAMBOLAN table in dynamodb
+  # and also to to write logs to CloudWatch
+  JambolanLambdaExecutionPolicy:
+    DependsOn:
+      - JambolanLambdaExecutionRole
+      - JambolanDynamoDBTable
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: LambdaJambolanDataAccessPolicy
+      Roles:
+        - Ref: JambolanLambdaExecutionRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:*
+            Resource:
+              - arn:aws:logs:eu-west-1:*:*
+          - Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:GetItem
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:BatchWriteItem
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource:
+              - Fn::GetAtt:
+                  - JambolanDynamoDBTable
+                  - Arn
+
+  # Create Store function
+  CreateStore:
+    DependsOn:
+      - JambolanLambdaExecutionRole
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: CreateStoreFuntion
+      MemorySize: 256
+      Code:
+        S3Bucket: jambolan-function
+        S3Key: jambolanapi-1.0.0.jar
+      Role:
+        Fn::GetAtt:
+          - JambolanLambdaExecutionRole
+          - Arn
+      Handler: com.three55.jambolanapi.function.CreateStoreFunction::handle
+      Runtime: java8
+      Timeout: 25
+
+  # Find Store by ID function
+  FindStoreById:
+    DependsOn:
+      - JambolanLambdaExecutionRole
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: FindStoreByIdFunction
+      MemorySize: 256
+      Code:
+        S3Bucket: jambolan-function
+        S3Key: jambolanapi-1.0.0.jar
+      Role:
+        Fn::GetAtt:
+          - JambolanLambdaExecutionRole
+          - Arn
+      Handler: com.three55.jambolanapi.function.FindStoreFunction::handle
+      Runtime: java8
+      Timeout: 25
+
+  # JAMBALON TABLE
+  # itemPK and itemSK for primary and sort key respectively
+  # Global Secondary Index to search a store by country (PK) and store name (SK)
+  JambolanDynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: JAMBOLAN
+      AttributeDefinitions:
+        - AttributeName: itemPK
+          AttributeType: S
+        - AttributeName: itemSK
+          AttributeType: S
+        - AttributeName: name
+          AttributeType: S
+        - AttributeName: addrCountry
+          AttributeType: S
+        - AttributeName: adminLogin
+          AttributeType: S
+      KeySchema:
+        - AttributeName: itemPK
+          KeyType: HASH
+        - AttributeName: itemSK
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: '5'
+        WriteCapacityUnits: '5'
+      GlobalSecondaryIndexes:
+        - IndexName: StoresAndCountryIndex
+          KeySchema:
+            - AttributeName: addrCountry
+              KeyType: HASH
+            - AttributeName: name
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+          ProvisionedThroughput:
+            ReadCapacityUnits: '5'
+            WriteCapacityUnits: '5'
+        - IndexName: StoresAdminIndex
+          KeySchema:
+            - AttributeName: adminLogin
+              KeyType: HASH
+          Projection:
+            ProjectionType: KEYS_ONLY
+          ProvisionedThroughput:
+            ReadCapacityUnits: '5'
+            WriteCapacityUnits: '5'
+...
