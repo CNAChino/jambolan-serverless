@@ -1,31 +1,24 @@
 # README.md
 
-## API Exposure
+## Deployment
 
-To Configure User Authentication and authorization in Cognito and API Gateway
-1.  Create a user pool
-2.  Create an API Gateway authorizer with the chosen user pool. 
-3.  Cnable the authorizer on selected API methods
+1. Build package  
 
+    `$ mvn clean package`
 
-To Call API method with user pool enabled, API Clients:
+2. Create S3 Bucket and copy `jambolan-cloudformation.yaml` and t`arget/jambolanapi-LATEST.jar` into an S3 Bucket.
 
-1.  Sign a user in to the chosen user pool, and obtain an identity token or access token. 
-2.  Call the deployed API Gateway API and supply the appropriate token in the Authorization header. 
+3. Create a user pool and take note of the ARN  
 
-## Create the stack using AWS Cloudformation   
-1.  Create S3 Bucket
-2.  Deploy the packge using cloudformation in JAMBOLAN-DATAPI-STAGE or JAMBOLAN-DATA-PROD
+4.  Create the Stack using cloudformation (jambolan-cloudformation.yaml) 
 
-$ aws --region eu-west-1 cloudformation deploy 
-		--template-file /<path>/jambolan-dataapi.template \
-		--stack-name <YOUR STACK NAME> --capabilities CAPABILITY_IAM
+    `$ aws cloudformation create-stack --stack-name <STACK-NAME> --template-url <S3-URL> --parameters \ `
+    `ParameterKey=JarS3BucketParam,ParameterValue=<BUCKET-NAME-FOR-JARFILE> \ `
+    `ParameterKey=JarFilenameParam,ParameterValue=<JAR-FILENAME> \ `
+    `ParameterKey=ApiStageNameParam,ParameterValue=<API-STAGE-NAME> \ `
+    `ParameterKey=UserPoolArnParam,ParameterValue=<USERPOOL-ARN>`
 
+# Invoking the API
 
-## Update the stack using AWS Cloudformation
-
-1. Get template
-$ aws --region us-west-1 cloudformation get-template --stack-name JAMBOLAN-STAGE > orig.tamplate
-
-2. Modify template and update stack (this is direct update)
-$ aws --region us-west-1 cloudformation update-stack --template-url <S3 URL for template>  --stack-name <STACK_NAMR> --capabilities CAPABILITY_IAM
+1.  Sign a user in to the user pool, and obtain the access token. 
+2.  Call the deployed API and supply the appropriate token in the Authorization header.

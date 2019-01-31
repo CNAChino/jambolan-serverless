@@ -6,13 +6,13 @@ Description: >
   and the API Gateway resources (POST /store and GET store/{id} need for exposure)
 
 Parameters:
-  S3BucketParam:
+  JarS3BucketParam:
     Type: String
     Default: 'jambolan-function'
   JarFilenameParam:
     Type: String
     Default: 'jambolanapi-LATEST.jar'
-  StageNameParam:
+  ApiStageNameParam:
     Type: String
     Default: 'LATEST'
   UserPoolArnParam:
@@ -80,7 +80,7 @@ Resources:
       MemorySize: 256
       Code:
         S3Bucket:
-          Ref: S3BucketParam
+          Ref: JarS3BucketParam
         S3Key:
           Ref: JarFilenameParam
       Role:
@@ -101,7 +101,7 @@ Resources:
       MemorySize: 256
       Code:
         S3Bucket:
-          Ref: S3BucketParam
+          Ref: JarS3BucketParam
         S3Key:
           Ref: JarFilenameParam
       Role:
@@ -227,7 +227,7 @@ Resources:
       RestApiId:
         Ref: StoreApi
       StageName:
-        Ref: StageNameParam
+        Ref: ApiStageNameParam
 
   ApiGatewayCloudWatchLogsRole:
     Type: AWS::IAM::Role
