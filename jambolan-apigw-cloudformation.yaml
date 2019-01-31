@@ -128,7 +128,58 @@ Resources:
           - RootResourceId
       PathPart: 'stores'
 
-  # /stores{id} resource
+  # POST /stores
+  CreateStoreRequest:
+    DependsOn:
+      - CreateStoreFunctionPermission
+      - JambolanAuthorizer
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizationScopes:
+        - https://5kkqz6p3pl.execute-api.us-west-1.amazonaws.com/dev-stage/stores/stores.read
+        - https://5kkqz6p3pl.execute-api.us-west-1.amazonaws.com/dev-stage/stores/stores.write
+      AuthorizerId:
+        Ref: JambolanAuthorizer
+      HttpMethod: POST
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: POST
+        Uri:
+          Fn::Join:
+            - ''
+            - - 'arn:aws:apigateway:'
+              - Ref: AWS::Region
+              - ":lambda:path/2015-03-31/functions/"
+              - "arn:aws:lambda:us-west-1:005811930030:function:CreateStoreFuntion"
+              - "/invocations"
+        IntegrationResponses:
+          - StatusCode: 200
+          - StatusCode: 400
+            SelectionPattern: '^(\[400\]).*$'
+          - StatusCode: 404
+            SelectionPattern: '^(\[404\]).*$'
+          - StatusCode: 500
+            SelectionPattern: '^(\[500\]).*$'
+          - StatusCode: 502
+            SelectionPattern: '^.*error.*$'
+          - StatusCode: 503
+            SelectionPattern: '^(\[503\]).*$'
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+      ResourceId:
+        Ref: StoresResource
+      RestApiId:
+        Ref: StoreApi
+      MethodResponses:
+        - StatusCode: 200
+        - StatusCode: 400
+        - StatusCode: 404
+        - StatusCode: 500
+        - StatusCode: 502
+        - StatusCode: 503
+      OperationName: CreateStore
+
+  # /stores/{id} resource
   StoreResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -142,7 +193,7 @@ Resources:
     Type: AWS::ApiGateway::Authorizer
     Properties:
       IdentitySource: method.request.header.Authorization
-      Name: JApiAuthorizer
+      Name: JambolanAuthorizer
       ProviderARNs:
         - arn:aws:cognito-idp:us-west-2:005811930030:userpool/us-west-2_lXILuhUTB
       RestApiId:
@@ -156,16 +207,18 @@ Resources:
       - JambolanAuthorizer
     Type: AWS::ApiGateway::Method
     Properties:
-      AuthorizationType: CUSTOM
+      AuthorizationType: COGNITO_USER_POOLS
       AuthorizationScopes:
         - https://5kkqz6p3pl.execute-api.us-west-1.amazonaws.com/dev-stage/stores/stores.read
         - https://5kkqz6p3pl.execute-api.us-west-1.amazonaws.com/dev-stage/stores/stores.write
       AuthorizerId:
         Ref: JambolanAuthorizer
       HttpMethod: GET
+      RequestParameters:
+        method.request.path.id: True
       Integration:
         Type: AWS
-        IntegrationHttpMethod: GET
+        IntegrationHttpMethod: POST
         Uri:
           Fn::Join:
             - ''
@@ -176,18 +229,14 @@ Resources:
               - "/invocations"
         IntegrationResponses:
           - StatusCode: 200
-          - StatusCode: 400
+          - StatusCode: 404
             SelectionPattern: '^(\[404\]).*$'
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        RequestParameters:
+          integration.request.path.storeId: method.request.path.id
+          #integration.request.header.Authorization: method.request.header.Authorization
         RequestTemplates:
-          application/json:
-            Fn::Join:
-              - ''
-              - - "{"
-                - '  "name": "$input.params(''id'')"'
-                - "}"
-      RequestParameters:
-        integration.request.path.storeId: True
-        integration.request.path.Authorization: "method.request.header.Authorization"
+          application/json: "\"$input.params('id')\""
       ResourceId:
         Ref: StoreResource
       RestApiId:
@@ -195,6 +244,7 @@ Resources:
       MethodResponses:
         - StatusCode: 200
         - StatusCode: 404
+      OperationName: FindStoreById
 
 Outputs:
   RootUrl:

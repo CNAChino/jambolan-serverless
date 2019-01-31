@@ -5,7 +5,22 @@ Description: >
   This template defines CreateStore and FindStoreById Lambda Functions
   and the API Gateway resources (POST /store and GET store/{id} need for exposure)
 
+Parameters:
+  S3BucketParam:
+    Type: String
+    Default: 'jambolan-function'
+  JarFilenameParam:
+    Type: String
+    Default: 'jambolanapi-LATEST.jar'
+  StageNameParam:
+    Type: String
+    Default: 'LATEST'
+  UserPoolArnParam:
+    Type: String
+
 Resources:
+
+# ----- LAMBDA RESOURCES ------
   # IAM Role that will be assumed by CreateStore and FindStoreById
   JambolanLambdaExecutionRole:
     Type: AWS::IAM::Role
@@ -55,7 +70,7 @@ Resources:
                   - JambolanDynamoDBTable
                   - Arn
 
-  # Create Store function
+  # Create Store Lambda function
   CreateStore:
     DependsOn:
       - JambolanLambdaExecutionRole
@@ -64,8 +79,10 @@ Resources:
       FunctionName: CreateStoreFuntion
       MemorySize: 256
       Code:
-        S3Bucket: jambolan-function
-        S3Key: jambolanapi-1.0.0.jar
+        S3Bucket:
+          Ref: S3BucketParam
+        S3Key:
+          Ref: JarFilenameParam
       Role:
         Fn::GetAtt:
           - JambolanLambdaExecutionRole
@@ -74,7 +91,7 @@ Resources:
       Runtime: java8
       Timeout: 25
 
-  # Find Store by ID function
+  # Find Store by ID Lambda function
   FindStoreById:
     DependsOn:
       - JambolanLambdaExecutionRole
@@ -83,8 +100,10 @@ Resources:
       FunctionName: FindStoreByIdFunction
       MemorySize: 256
       Code:
-        S3Bucket: jambolan-function
-        S3Key: jambolanapi-1.0.0.jar
+        S3Bucket:
+          Ref: S3BucketParam
+        S3Key:
+          Ref: JarFilenameParam
       Role:
         Fn::GetAtt:
           - JambolanLambdaExecutionRole
@@ -92,6 +111,8 @@ Resources:
       Handler: com.three55.jambolanapi.function.FindStoreFunction::handle
       Runtime: java8
       Timeout: 25
+
+## ------ DYNAMODB RESOURCES -------
 
   # JAMBALON TABLE
   # itemPK and itemSK for primary and sort key respectively
@@ -140,4 +161,262 @@ Resources:
           ProvisionedThroughput:
             ReadCapacityUnits: '5'
             WriteCapacityUnits: '5'
+
+
+## ------ API GATEWAY RESOURCES -------
+
+  StoreApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Description: API for accessing store data
+      Name: Store API
+      FailOnWarnings: true
+
+  CreateStoreFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - CreateStore
+          - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Join:
+          - ''
+          - - 'arn:aws:execute-api:'
+            - Ref: AWS::Region
+            - ":"
+            - Ref: AWS::AccountId
+            - ":"
+            - Ref: StoreApi
+            - "/*"
+
+  FindStoreByFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - FindStoreById
+          - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Join:
+          - ''
+          - - 'arn:aws:execute-api:'
+            - Ref: AWS::Region
+            - ":"
+            - Ref: AWS::AccountId
+            - ":"
+            - Ref: StoreApi
+            - "/*"
+
+  StoreApiStage:
+    DependsOn:
+      - ApiGatewayAccount
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId:
+        Ref: ApiDeployment
+      MethodSettings:
+        - DataTraceEnabled: true
+          HttpMethod: "*"
+          LoggingLevel: INFO
+          ResourcePath: "/*"
+      RestApiId:
+        Ref: StoreApi
+      StageName:
+        Ref: StageNameParam
+
+  ApiGatewayCloudWatchLogsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: ApiGatewayLogsPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:DescribeLogGroups
+                  - logs:DescribeLogStreams
+                  - logs:PutLogEvents
+                  - logs:GetLogEvents
+                  - logs:FilterLogEvents
+                Resource: "*"
+
+  ApiGatewayAccount:
+    Type: AWS::ApiGateway::Account
+    Properties:
+      CloudWatchRoleArn:
+        Fn::GetAtt:
+          - ApiGatewayCloudWatchLogsRole
+          - Arn
+
+  ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - FindStoreRequest
+    Properties:
+      RestApiId:
+        Ref: StoreApi
+      StageName: DummyStage
+
+  # /stores resource
+  StoresResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId:
+        Ref: StoreApi
+      ParentId:
+        Fn::GetAtt:
+          - StoreApi
+          - RootResourceId
+      PathPart: 'stores'
+
+  # POST /stores
+  CreateStoreRequest:
+    DependsOn:
+      - CreateStoreFunctionPermission
+      - JambolanAuthorizer
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizationScopes:
+        - https://5kkqz6p3pl.execute-api.us-west-1.amazonaws.com/dev-stage/stores/stores.read
+        - https://5kkqz6p3pl.execute-api.us-west-1.amazonaws.com/dev-stage/stores/stores.write
+      AuthorizerId:
+        Ref: JambolanAuthorizer
+      HttpMethod: POST
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: POST
+        Uri:
+          Fn::Join:
+            - ''
+            - - 'arn:aws:apigateway:'
+              - Ref: AWS::Region
+              - ":lambda:path/2015-03-31/functions/"
+              - Fn::GetAtt:
+                  - CreateStore
+                  - Arn
+              - "/invocations"
+        IntegrationResponses:
+          - StatusCode: 200
+          - StatusCode: 400
+            SelectionPattern: '^(\[400\]).*$'
+          - StatusCode: 404
+            SelectionPattern: '^(\[404\]).*$'
+          - StatusCode: 500
+            SelectionPattern: '^(\[500\]).*$'
+          - StatusCode: 502
+            SelectionPattern: '^.*error.*$'
+          - StatusCode: 503
+            SelectionPattern: '^(\[503\]).*$'
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+      ResourceId:
+        Ref: StoresResource
+      RestApiId:
+        Ref: StoreApi
+      MethodResponses:
+        - StatusCode: 200
+        - StatusCode: 400
+        - StatusCode: 404
+        - StatusCode: 500
+        - StatusCode: 502
+        - StatusCode: 503
+      OperationName: CreateStore
+
+  # /stores/{id} resource
+  StoreResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId:
+        Ref: StoreApi
+      ParentId:
+        Ref: StoresResource
+      PathPart: '{id}'
+
+  JambolanAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      IdentitySource: method.request.header.Authorization
+      Name: JambolanAuthorizer
+      ProviderARNs:
+        - Ref: UserPoolArnParam
+      RestApiId:
+        Ref: StoreApi
+      Type: COGNITO_USER_POOLS
+
+  # GET /stores/{storeId}
+  FindStoreRequest:
+    DependsOn:
+      - FindStoreByFunctionPermission
+      - JambolanAuthorizer
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizationScopes:
+        - https://5kkqz6p3pl.execute-api.us-west-1.amazonaws.com/dev-stage/stores/stores.read
+        - https://5kkqz6p3pl.execute-api.us-west-1.amazonaws.com/dev-stage/stores/stores.write
+      AuthorizerId:
+        Ref: JambolanAuthorizer
+      HttpMethod: GET
+      RequestParameters:
+        method.request.path.id: True
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: POST
+        Uri:
+          Fn::Join:
+            - ''
+            - - 'arn:aws:apigateway:'
+              - Ref: AWS::Region
+              - ":lambda:path/2015-03-31/functions/"
+              - Fn::GetAtt:
+                  - FindStoreById
+                  - Arn
+              - "/invocations"
+        IntegrationResponses:
+          - StatusCode: 200
+          - StatusCode: 404
+            SelectionPattern: '^(\[404\]).*$'
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        RequestParameters:
+          integration.request.path.storeId: method.request.path.id
+          #integration.request.header.Authorization: method.request.header.Authorization
+        RequestTemplates:
+          application/json: "\"$input.params('id')\""
+      ResourceId:
+        Ref: StoreResource
+      RestApiId:
+        Ref: StoreApi
+      MethodResponses:
+        - StatusCode: 200
+        - StatusCode: 404
+      OperationName: FindStoreById
+
+Outputs:
+  RootUrl:
+    Description: Root URL of the API gateway
+    Value:
+      Fn::Join:
+        - ''
+        - - https://
+          - Ref: StoreApi
+          - ".execute-api."
+          - Ref: AWS::Region
+          - ".amazonaws.com"
 ...
