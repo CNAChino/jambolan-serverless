@@ -42,11 +42,14 @@ AWS Resources are defined using cloudformation template file which requires the 
 
 4.  Create the Stack using cloudformation (jambolan-cloudformation.yaml) 
 
-    `$ aws cloudformation create-stack --stack-name <STACK-NAME> --template-url <S3-URL> --parameters \ `
-    `ParameterKey=JarS3BucketParam,ParameterValue=<BUCKET-NAME-FOR-JARFILE> \ `
-    `ParameterKey=JarFilenameParam,ParameterValue=<JAR-FILENAME> \ `
-    `ParameterKey=ApiStageNameParam,ParameterValue=<API-STAGE-NAME> \ `
-    `ParameterKey=UserPoolArnParam,ParameterValue=<USERPOOL-ARN>`
+    `$ aws cloudformation create-stack --stack-name <STACK-NAME> --template-url <S3-URL> --parameters \ ` \
+    `ParameterKey=JarS3BucketParam,ParameterValue=<BUCKET-NAME-FOR-JARFILE> \ ` \
+    `ParameterKey=JarFilenameParam,ParameterValue=<JAR-FILENAME> \ ` \
+    `ParameterKey=ApiStageNameParam,ParameterValue=<API-STAGE-NAME> \ ` \
+    `ParameterKey=UserPoolArnParam,ParameterValue=<USERPOOL-ARN> \ ` \
+    `ParameterKey=TwilioAccountSIdParam,ParameterValue=<USERPOOL-ARN> \ ` \
+    `ParameterKey=TwilioAuthTokenParam,ParameterValue=<USERPOOL-ARN> \ ` \
+    `ParameterKey=TwilioMessageServiceIdParam,ParameterValue=<USERPOOL-ARN>`
 
 # Invoking the API
 
