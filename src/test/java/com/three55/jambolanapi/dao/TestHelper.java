@@ -25,8 +25,8 @@ public class TestHelper {
 		store.setEmail("cocina.conchita@sampleemail.com");
 		store.setLogoURL("http://cocinaconchita.com/logo.PNG");
 		store.setKeywords(Arrays.asList("lechon","carendiria","turo-turo","lutong bahay"));
-		store.setPhone1("+63544736876");
-		store.setPhone2("473-1235");
+		store.setPhone1("somephone1"); // do not use ranodom mobile number for testing, sms is enabled
+		store.setPhone2("somephone2"); // do not use ranodom mobile number for testing, sms is enabled
 		store.setWebsite("http://www.cocinaconchita.com");
 		store.setAddrLine1("#41 Panganiban Drive");
 		store.setAddrLine2("Dr, Gimenez Patio Barangay");

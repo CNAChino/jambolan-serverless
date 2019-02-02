@@ -40,7 +40,7 @@ public class StoreFunctionTest {
 		DynamoDBManager.setClient(client);
 
 		System.setProperty("sqlite4java.library.path","src/lib");
-		
+
 		setupTableParameters();
 		
 		createTable(client);
@@ -50,25 +50,28 @@ public class StoreFunctionTest {
 	@Test
 	public void testAddStore() {
 		// dao that is connected to embedded dynamodb
-		StoreDao storeDao = StoreDynamoDBDao.getInstance(); 
-		 
+		StoreDao storeDao = StoreDynamoDBDao.getInstance();
+
 		CreateStoreFunction csf = new CreateStoreFunction();
+
+		String testBParty = System.getenv("TEST_B_PARTY");
+		if (testBParty == null) throw new RuntimeException("environment variable TEST_B_PARTY not set");
 		
 		Store newStore = TestHelper.createCocinaStore();
-		
+		newStore.setPhone1(testBParty);
+
+
 		// create store
 		String id = csf.createStore(newStore, storeDao);
-		assertNotNull(id);
-		assertTrue(id.startsWith("Store-"));
-		
+
+		// send sms message
+		String msgId = csf.sendSMSNotification(newStore);
+		assertNotNull(msgId);
+
 		// find store
 		FindStoreFunction fsf = new FindStoreFunction();
 		Optional<Store> optStore = fsf.findStoreById(id, storeDao);
 		assertTrue(optStore.isPresent());
-		
-		System.out.println(newStore);
-		System.out.println(optStore.get());
-		
 		assertEquals(newStore, optStore.get());
 		
 	}
