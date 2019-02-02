@@ -66,7 +66,7 @@ public class CreateStoreFunction {
 	public String createStore(Store store, StoreDao storeDao) {
 
 		Validator.validateParam(store, Validator.requiredNotNull(), "Null Input for createStore");
-		
+
 		Validator.validateParam(store.getAddrCountry(), Validator.requiredNotNull(),
 				"createStore failed.  Store.addrCountry is required.");
 		
@@ -81,7 +81,7 @@ public class CreateStoreFunction {
 	}
 
 	/**
-	 * sends SMS notification via Twilio.  environment variables must be set: TWILIO_ACCOUNT_SID,
+	 * sends SMS notification via Twilio.  environment variables must be set i.e. TWILIO_ACCOUNT_SID,
 	 * TWILIO_AUTH_TOKEN, TWILIO_MESSAGING_SERVICE_ID
 	 *
 	 * @param store store object
@@ -118,6 +118,7 @@ public class CreateStoreFunction {
 			Message message = Message.creator(bPartyPhone, msgSvcId,
 					textMsg).create();
 
+			// unique ID for the message
 			String msgId = message.getSid();
 			log.info("Message sent to " + pn + " .  ID = " + msgId);
 
