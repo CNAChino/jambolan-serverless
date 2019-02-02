@@ -23,7 +23,7 @@ public class TestHelper {
 		store.setItemSK(store.getItemPK());
 		store.setName("Cocina Conchita");
 		store.setEmail("cocina.conchita@sampleemail.com");
-		store.setLogoURL("http://cocinaconchita.com/logo.PNG");
+		store.setLogoURL("http://cocinaconchita.com/samplelogo.PNG");
 		store.setKeywords(Arrays.asList("lechon","carendiria","turo-turo","lutong bahay"));
 		store.setPhone1("somephone1"); // do not use ranodom mobile number for testing, sms is enabled
 		store.setPhone2("somephone2"); // do not use ranodom mobile number for testing, sms is enabled
