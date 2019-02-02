@@ -7,8 +7,13 @@ Underlying technology documentation:
 3. https://docs.aws.amazon.com/apigateway
 4. https://docs.aws.amazon.com/cognito
 
-This project demonstrates a sample serverless application using **AWS API Gateway**, **AWS Lambda** and **AWS DynamoDB**.  
-It also uses **AWS Cognito** to secure the API endpoint by having an authenticated call.  Following is the application diagram:  
+This project demonstrates a sample serverless application using **AWS API Gateway**, **AWS Lambda**, **AWS DynamoDB**
+and **Twilio SMS API**.  Upon successful store creation, it sends an sms message to the phone number included in the
+request message
+  
+It also uses **AWS Cognito** to secure the API endpoint by having an authenticated call.  
+
+Following is the application diagram:  
 
 ![TD Image](appdesign.png)
 
