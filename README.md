@@ -1,7 +1,14 @@
 # README.md
 
-This project demonstrates a sample serverless application using AWS API Gateway, Lambda and DynamoDB.  
-It also uses AWS cognito to secure the API endpoint by having an authenticated call.  Following is the application diagram:  
+Underlying technology documentation:
+
+1. https://docs.aws.amazon.com/lambda
+2. https://docs.aws.amazon.com/dynamodb
+3. https://docs.aws.amazon.com/apigateway
+4. https://docs.aws.amazon.com/cognito
+
+This project demonstrates a sample serverless application using **AWS API Gateway**, **AWS Lambda** and **AWS DynamoDB**.  
+It also uses **AWS Cognito** to secure the API endpoint by having an authenticated call.  Following is the application diagram:  
 
 ![TD Image](appdesign.png)
 
@@ -19,9 +26,14 @@ AWS Resources are defined using cloudformation template file which requires the 
     
     `$ mvn clean package`
 
+    This command will compile, unit test and package the lambda application into a jar file.  The unit test makes use of an embedded DynamoDB.
+
 2. Create S3 Bucket and copy `jambolan-cloudformation.yaml` and t`arget/jambolanapi-LATEST.jar` into an S3 Bucket.
 
-3. Create a user pool and take note of the ARN  
+3. Create a user pool and take note of the ARN and Authorization Scope.  For each **AWS::ApiGateway::Method** resource in cloudformation template,  Put the defined authorization scopes like so:\
+    AuthorizationScopes:\
+        - https://5kaiekf3pl.execute-api.us-west-1.amazonaws.com/dev-stage/stores/stores.read \
+        - https://5kaiekf3pl.execute-api.us-west-1.amazonaws.com/dev-stage/stores/stores.write  
 
 4.  Create the Stack using cloudformation (jambolan-cloudformation.yaml) 
 
