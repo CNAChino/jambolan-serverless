@@ -23,7 +23,7 @@ public class CreateStoreFunction {
 	 * 
 	 * @param store Store object
 	 * @param ctx AWS Lambda execution context
-	 * @return
+	 * @return store id
 	 */
 	public String handle(Store store, Context ctx) {
 		try {
@@ -59,9 +59,9 @@ public class CreateStoreFunction {
 	/**
 	 * Creates store in the database
 	 * 
-	 * @param store
-	 * @param storeDao
-	 * @return
+	 * @param store store objectto saved
+	 * @param storeDao instance of StoreDao
+	 * @return store id
 	 */
 	public String createStore(Store store, StoreDao storeDao) {
 
@@ -77,27 +77,28 @@ public class CreateStoreFunction {
 				"createStore failed.  Store.adminLogin is required."
 				);
 
-		String storeId = storeDao.createStore(store);
-		return storeId;
-
+		return storeDao.createStore(store);
 	}
 
 	/**
-	 * sends SMS notification via Twilio.  environment variables must be set: ACCOUNT_SID, AUTH_TOKEN, MESSAGING_SERVICE_ID
+	 * sends SMS notification via Twilio.  environment variables must be set: TWILIO_ACCOUNT_SID,
+	 * TWILIO_AUTH_TOKEN, TWILIO_MESSAGING_SERVICE_ID
 	 *
-	 * @param store
+	 * @param store store object
 	 * @return messageId A string that uniquely identifies this message
 	 */
 	public String sendSMSNotification(Store store) {
 		try {
 
 			// Get Environment Variables from Twilio.  Configured during deployment of AWS LAMBDA function
-			String accountSid = System.getenv("ACCOUNT_SID");
-			String authToken = System.getenv("AUTH_TOKEN");
-			String msgSvcId = System.getenv("MESSAGING_SERVICE_ID");
+			String accountSid = System.getenv("TWILIO_ACCOUNT_SID");
+			String authToken = System.getenv("TWILIO_AUTH_TOKEN");
+			String msgSvcId = System.getenv("TWILIO_MESSAGING_SERVICE_ID");
 
 			if (accountSid  == null || authToken == null ||  msgSvcId == null) {
-				throw new IllegalArgumentException("Required environment variables (ACCOUNT_SID|AUTH_TOKEN|MESSAGING_SERVICE_ID) for twilio not set.");
+				String msg = "Required environment variables (TWILIO_ACCOUNT_SID|TWILIO_AUTH_TOKEN|" +
+						"TWILIO_MESSAGING_SERVICE_ID) for twilio not set.";
+				throw new IllegalArgumentException(msg);
 			}
 
 			// Initialize Twilio
@@ -105,6 +106,9 @@ public class CreateStoreFunction {
 
 			// B-PARTY number (recipient)
 			String pn = store.getPhone1();
+
+			if (pn == null) return null;
+
 			PhoneNumber bPartyPhone = new PhoneNumber(pn);
 
 			// SMS Message
@@ -120,7 +124,8 @@ public class CreateStoreFunction {
 			return msgId;
 
 		} catch (Exception e) {
-			throw new RuntimeException(e);
+			log.error(e.getMessage());
+			return null;
 		}
 	}
 
