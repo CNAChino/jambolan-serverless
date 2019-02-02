@@ -17,6 +17,12 @@ Parameters:
     Default: 'LATEST'
   UserPoolArnParam:
     Type: String
+  TwilioAccountSIdParam:
+    Type: String
+  TwilioAuthTokenParam:
+    Type: String
+  TwilioMessageServiceIdParam:
+    Type: String
 
 Resources:
 
@@ -88,6 +94,14 @@ Resources:
           - JambolanLambdaExecutionRole
           - Arn
       Handler: com.three55.jambolanapi.function.CreateStoreFunction::handle
+      Environment:
+        Variables:
+          TWILIO_ACCOUNT_SID:
+            Ref: TwilioAccountSIdParam
+          TWILIO_AUTH_TOKEN:
+            Ref: TwilioAuthTokenParam
+          TWILIO_MESSAGING_SERVICE_ID:
+            Ref: TwilioMessageServiceIdParam
       Runtime: java8
       Timeout: 25
 
