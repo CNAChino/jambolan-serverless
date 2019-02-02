@@ -61,7 +61,13 @@ Resources:
             Action:
               - logs:*
             Resource:
-              - arn:aws:logs:eu-west-1:*:*
+              - Fn::Join:
+                - ''
+                - - 'arn:aws:logs:'
+                  - Ref: AWS::Region
+                  - ":"
+                  - Ref: AWS::AccountId
+                  - ":log-group:/aws/lambda/*"
           - Effect: Allow
             Action:
               - dynamodb:BatchGetItem
